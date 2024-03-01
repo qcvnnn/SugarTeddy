@@ -34,9 +34,9 @@ class MainMenu:
         self.retry_button = pygame.transform.scale(self.retry_button, (self.retry_button.get_width() * 5, self.retry_button.get_height() * 5))  # Увеличиваем кнопку в 5 раз
         self.retry_button_rect = self.retry_button.get_rect(center=(self.screen.get_width() // 2, self.screen.get_height() // 2 + 50))
 
-
         self.score = 0
         self.best_score = 0
+        self.difficulty = 0
         
         self.retry_mode = False
     def set_score(self, score, best_score):
@@ -45,6 +45,9 @@ class MainMenu:
 
     def set_retry_mode(self, mode):
         self.retry_mode = mode
+
+    def update_difficulty(self, diff):
+        self.difficulty = diff
 
     def draw(self):    
         self.screen.blit(self.background, (0, 0))
@@ -57,7 +60,10 @@ class MainMenu:
             self.screen.blit(self.retry_button, self.retry_button_rect)
 
         self.screen.blit(self.logo, self.logo_rect)
-        # self.screen.blit(self.pause_button, self.pause_button_rect)
+
+        difficulty_surface = self.font.render(str(self.difficulty), True, (255, 255, 255))
+        self.difficulty_rect = difficulty_surface.get_rect(center=(67, 42))
+        self.screen.blit(difficulty_surface, self.difficulty_rect)
 
         score_surface = self.font.render(str(self.score), True, (255, 255, 255))
         score_rect = score_surface.get_rect()
@@ -76,4 +82,6 @@ class MainMenu:
         if event.type == pygame.MOUSEBUTTONDOWN:
             if self.play_button_rect.collidepoint(event.pos):
                 return "play"
+            if self.difficulty_rect.collidepoint(event.pos):
+                return "diffchange"
         return None

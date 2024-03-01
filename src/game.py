@@ -31,8 +31,10 @@ class Game:
         # Создание игрока
         self.player = Player()
         
-        self.spike_spawn_interval = 250  
+        self.default_spike_spawn_interval = 500
         self.spike_spawn_timer = 0
+
+        self.difficulty = 0
 
         # Создание земли
         self.spike_group = pygame.sprite.Group()
@@ -84,9 +86,9 @@ class Game:
                     if action == "play":
                         self.running = False  # Запускаем игру
                         self.start_game()
-                    elif action == "pause":
-                        self.running = False  # Запускаем игру
-                        self.pause_game()
+                    elif action == "diffchange":
+                        self.difficulty = (self.difficulty + 1) % 10
+                        self.main_menu.update_difficulty(self.difficulty)
             self.main_menu.set_score(self.score, self.best_score)
             self.main_menu.draw()
             pygame.display.flip()
@@ -99,7 +101,9 @@ class Game:
         self.death_sound.play()
         pygame.time.set_timer(pygame.USEREVENT, 2200)
         
-    def start_game(self, is_from_pause = False):
+    def start_game(self):
+        self.spike_spawn_interval = self.default_spike_spawn_interval // (self.difficulty+1)
+       
         self.score = 0
         self.record = False
 
@@ -199,6 +203,12 @@ class Game:
             best_rect.centerx = 565
             best_rect.centery = 42
             self.screen.blit(best_surface, best_rect)
+
+            difficulty_surface = self.font.render(str(self.difficulty), True, (255, 255, 255))
+            self.difficulty_rect = difficulty_surface.get_rect(center=(67, 42))
+            self.screen.blit(difficulty_surface, self.difficulty_rect)
+
+
 
             pygame.display.flip()
 
