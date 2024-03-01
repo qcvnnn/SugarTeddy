@@ -9,12 +9,20 @@ class Game:
     def __init__(self):
         # Инициализация Pygame
         pygame.init()
+        pygame.mixer.init()
+
+        self.score = 0
+        with open('./best.txt') as f:
+            self.best_score = int(f.read())
 
         # Установка размеров экрана
         self.SCREEN_WIDTH = 800
         self.SCREEN_HEIGHT = 600
         self.screen = pygame.display.set_mode((self.SCREEN_WIDTH, self.SCREEN_HEIGHT))
-        pygame.display.set_caption("Infinity Runner")
+        pygame.display.set_caption("Sugar Teddy")
+        pygame.display.set_icon(pygame.image.load('./visual/sprites/ui/logo.png'))
+
+        self.font = pygame.font.Font('./fonts/Arcadepi.ttf', 24)
 
         # Загрузка изображений для фона и земли
         self.background = pygame.image.load('./visual/sprites/obj/bg.png').convert()
@@ -46,8 +54,26 @@ class Game:
         self.curtain = pygame.image.load('./visual/sprites/ui/curtain.png').convert_alpha()
         self.curtain = pygame.transform.scale(self.curtain, (self.SCREEN_WIDTH, self.SCREEN_HEIGHT))  # Масштабирование занавески
 
+        self.panel = pygame.image.load('./visual/sprites/ui/panel.png').convert_alpha()
+        self.panel = pygame.transform.scale(self.panel, (self.screen.get_width(), self.screen.get_height()))  # Масштабируем занавеску до размеров экрана
+        
+        self.pause_button = pygame.image.load('./visual/sprites/ui/pause.png').convert_alpha()
+        self.pause_button = pygame.transform.scale(self.pause_button, (self.pause_button.get_width() * 3, self.pause_button.get_height() * 3))  # Увеличиваем кнопку в 5 раз
+        self.pause_button_rect = self.pause_button.get_rect(topleft=(42, 18))  # Устанавливаем левый верхний угол кнопки в позицию (10, 10)
+
+        self.logo = pygame.image.load('./visual/sprites/ui/logo.png').convert_alpha()
+        self.logo = pygame.transform.scale(self.logo, (self.logo.get_width() * 3, self.logo.get_height() * 3))  # Увеличиваем кнопку в 5 раз
+        self.logo_rect = self.logo.get_rect(topleft=(self.screen.get_width() - self.logo.get_width() - 42, 18))  # Устанавливаем левый верхний угол кнопки в позицию (10, 10)
+
+        self.jump_sound = pygame.mixer.Sound('./sounds/jump.wav')
+        self.death_sound = pygame.mixer.Sound('./sounds/death.wav')
+        self.record_sound = pygame.mixer.Sound('./sounds/record.wav')
 
     def run(self):
+        pygame.mixer.music.load('./sounds/bgmusic.wav')
+        pygame.mixer.music.play(loops=-1)
+        pygame.mixer.music.set_volume(0.3)
+
         while self.running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -58,7 +84,10 @@ class Game:
                     if action == "play":
                         self.running = False  # Запускаем игру
                         self.start_game()
-
+                    elif action == "pause":
+                        self.running = False  # Запускаем игру
+                        self.pause_game()
+            self.main_menu.set_score(self.score, self.best_score)
             self.main_menu.draw()
             pygame.display.flip()
             self.clock.tick(60)
@@ -66,15 +95,18 @@ class Game:
         # Запуск игры
                                 
     def run_death_animation(self):
-        pygame.time.set_timer(pygame.USEREVENT, 1200)
+        pygame.mixer.music.stop()
+        self.death_sound.play()
+        pygame.time.set_timer(pygame.USEREVENT, 2200)
         
-    def start_game(self):
-        
+    def start_game(self, is_from_pause = False):
+        self.score = 0
+        self.record = False
+
         self.ground_1.start()
         self.ground_2.start()
         self.collision = False
 
-        pygame.display.set_caption("Infinity Runner")  # Установка заголовка окна
         self.player = Player()
         self.ground = Ground(self.SCREEN_WIDTH, self.SCREEN_HEIGHT)
         self.spike_group = pygame.sprite.Group()
@@ -87,20 +119,33 @@ class Game:
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_SPACE and not self.jumping and not self.collision:
                         self.jumping = True
+                        self.jump_sound.play()
                 elif event.type == pygame.USEREVENT:
                     pygame.time.set_timer(pygame.USEREVENT, 0)
+                    if self.record:
+                        self.best_score = self.score
+                        with open("./best.txt", "w") as f:
+                            f.write(str(self.score))
+                        self.record = False
                     self.run()
 
+            if not self.collision:
+                if self.player.check_collision(self.spike_group):
+                    for spike in self.spike_group:
+                        spike.kill()  # Убираем все шипы
+                    self.ground_1.stop()
+                    self.ground_2.stop()
 
-            if self.player.check_collision(self.spike_group):
-                for spike in self.spike_group:
-                    spike.kill()  # Убираем все шипы
-                self.ground_1.stop()
-                self.ground_2.stop()
+                    self.main_menu.set_retry_mode(True)
 
-                self.player.change_animation("death")  # Запускаем анимацию смерти
-                self.collision = True
-                self.run_death_animation()
+                    self.player.change_animation("death")  # Запускаем анимацию смерти
+                    self.collision = True
+                    self.run_death_animation()
+                else:
+                    self.score += 1
+                    if self.score > self.best_score and not self.record:
+                        self.record = True
+                        self.record_sound.play()
 
             if self.jumping:
                 if self.jump_count >= -13:
@@ -139,6 +184,21 @@ class Game:
                 self.spike_group.draw(self.screen)
 
             self.screen.blit(self.curtain, (0,0))
+            self.screen.blit(self.panel, (0,0))
+            # self.screen.blit(self.pause_button, self.pause_button_rect)
+            self.screen.blit(self.logo, self.logo_rect)
+
+            score_surface = self.font.render(str(self.score), True, (255, 255, 255))
+            score_rect = score_surface.get_rect()
+            score_rect.centerx = 238
+            score_rect.centery = 42
+            self.screen.blit(score_surface, score_rect)
+
+            best_surface = self.font.render(str(self.best_score), True, (255, 255, 255))
+            best_rect = best_surface.get_rect()
+            best_rect.centerx = 565
+            best_rect.centery = 42
+            self.screen.blit(best_surface, best_rect)
 
             pygame.display.flip()
 
