@@ -25,6 +25,10 @@ pip install -r requirements.txt
 python ./main.py
 ~~~
 
+## Документация по проекту
+- [Поясниельная записка](docs/Пояснительная_записка_к_проекту_Sugar_Teddy.docx)
+- [Презентация](docs/Игра%20Sugar%20Teddy.pptx)
+
 ## Использованные ресурсы
 - Документация Pygame: https://devdocs.io/pygame/
 - Спрайты и звуки: https://demonstick-games.itch.io/pixel-art-2d-endless-runner-package
